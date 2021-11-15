@@ -1,0 +1,2 @@
+https://vaadin.com/learn/tutorials/cloud-deployment/azure
+https://docs.microsoft.com/ru-ru/azure/azure-cache-for-redis/cache-java-get-started
