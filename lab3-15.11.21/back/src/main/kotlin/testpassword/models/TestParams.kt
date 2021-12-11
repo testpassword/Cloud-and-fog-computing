@@ -8,17 +8,16 @@ enum class OUTPUT_MODE { EMAIL, HTTP, SMB }
 
 @Serializable data class TestParams(
     val connectionUrl: String,
-    val saveBetter: Boolean,
     val queries: List<String>,
-    val outputMode: OUTPUT_MODE
+    val outputMode: OUTPUT_MODE,
+    val outputParams: String = "",
+    val saveBetter: Boolean = false,
 ) {
 
     val creds: JDBC_Creds
         get() =
             if (DBsSupport.CONNECTION_URL_PATTERN.matches(connectionUrl)) {
-                val (url, rawLogin, rawPass) = connectionUrl.split(";")
-                val login = rawLogin.split("user=").last()
-                val password = rawPass.split("password=").last()
-                JDBC_Creds(url, login, password)
+                val (url, login, pass) = connectionUrl.split(";")
+                JDBC_Creds(url, login, pass)
             } else throw java.sql.SQLClientInfoException()
 }

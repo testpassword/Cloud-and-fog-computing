@@ -12,9 +12,6 @@ components:
         connectionUrl:
           type: string
           required: true
-        saveBetter:
-          type: boolean
-          required: false
         queries:
           type: array
           required: true
@@ -24,9 +21,17 @@ components:
           type: string
           nullable: true
           enum:
-            - EMAIL
             - HTTP
+            - EMAIL
             - SMB
+        saveBetter:
+          type: boolean
+          required: false
+          default: false
+        outputParams:
+          type: string
+          required: false
+          default: ""
     TestResult:
       type: object
       properties:

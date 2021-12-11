@@ -12,7 +12,7 @@ class DatabaseNotSupportedException: SQLException()
 object DBsSupport {
 
     private const val PING_TIMEOUT_SEC = 20
-    val CONNECTION_URL_PATTERN = Regex("jdbc:.*://.*;user=.*;password=.*")
+    val CONNECTION_URL_PATTERN = Regex("jdbc:.*://.*;.*;.*")
     val SUPPORTED_DBs = setOf(
         "sqlserver",
         "postgresql"

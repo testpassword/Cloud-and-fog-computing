@@ -10,15 +10,9 @@ class DatabaseBusyException: SQLException()
 object DBsLock {
 
     private var client: Jedis? = null
-
-    private infix fun <T> isInit(onSuccess: () -> T): T =
-        if (client != null) onSuccess() else throw IllegalStateException("you should call initLock() method before use it")
-
-    operator fun invoke(redisCreds: String): Unit =
+    operator fun invoke(): Unit =
         try {
-            val (host, pass) = redisCreds.split(";")
-            val (url, port) = host.split(":")
-            client = Jedis(JedisShardInfo(url, port.toInt(), true).apply { password = pass }).apply { ping() }
+            client = Jedis(parseCredsFromEnv()).also { it.ping() }
         } catch (e: Exception) {
             printErr(when (e) {
                 is IndexOutOfBoundsException -> "REDIS_CACHE_CREDS should match pattern 'url:port;password'"
@@ -26,6 +20,15 @@ object DBsLock {
                 else -> "Unexpected exception: ${e.stackTraceToString()}"
             })
         }
+
+    private infix fun <T> isInit(onSuccess: () -> T): T =
+        if (client != null) onSuccess() else throw IllegalStateException("you should call invoke() method before use it to initialize")
+
+    private fun parseCredsFromEnv(): JedisShardInfo {
+        val (url, pass) = System.getenv("REDIS_CACHE_CREDS").split(";").let { it[0] to it[1] }
+        val (host, port) = url.split(":")
+        return JedisShardInfo(host, port.toInt(), true).apply { password = pass }
+    }
 
     operator fun contains(dbUrl: String): Boolean = isInit { client!!.get(dbUrl) != null }
 

@@ -9,11 +9,10 @@ import io.ktor.serialization.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import kotlinx.serialization.json.Json
+import testpassword.models.TestResult
 import testpassword.plugins.*
 import testpassword.routes.actions
-import testpassword.services.DBsLock
-import testpassword.services.DatabaseNotSupportedException
-import testpassword.services.DBsSupport
+import testpassword.services.*
 import java.rmi.ConnectException
 import java.sql.SQLClientInfoException
 
@@ -59,18 +58,12 @@ fun Application.configureExceptionHandlers() =
     }
 
 fun main() {
-    try {
-        embeddedServer(Netty,
-            System.getenv("SERVICE_PORT").toIntOrNull() ?: 80,
-            System.getenv("SERVICE_HOST") ?: "0.0.0.0"
-        ) {
-            DBsLock(System.getenv("REDIS_CACHE_CREDS"))
-            configureModules()
-            configureSecurity()
-            configureExceptionHandlers()
-            configureRouting()
-        }.start(wait = true)
-    } catch (e: NumberFormatException) {
-        printErr("port should be in range [0; 65535]")
-    }
+    ReportsWriter(listOf(TestResult("d", 1.0, 3.0, 3.2)))
+    embeddedServer(Netty, System.getenv("SERVICE_PORT").toIntOr(80), System.getenv("SERVICE_HOST") ?: "0.0.0.0") {
+        DBsLock()
+        configureModules()
+        configureSecurity()
+        configureExceptionHandlers()
+        configureRouting()
+    }.start(wait = true)
 }

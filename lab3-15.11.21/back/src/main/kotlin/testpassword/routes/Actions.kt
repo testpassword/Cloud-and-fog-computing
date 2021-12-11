@@ -10,16 +10,17 @@ import testpassword.models.TestParams
 // TODO: установить время блокировки (хранения записи в redis), периодически продлевать его, если операция ещё идёт
 
 fun Route.actions() =
-    route("/actions/") {
+    route("/testing/") {
         post {
             val testParams = call.receive<TestParams>()
             val creds = testParams.creds
-            val dbUrl = creds.first
             DBsSupport.checkDbAvailability(creds)
-            DBsLock.executeLocking(dbUrl) {
-                DBsSupport.executeQuery(creds) {
+            DBsLock.executeLocking(creds.first) {
+
+                val results = DBsSupport.executeQuery(creds) {
                     "SELECT @@VERSION as 'ver'"
                 }
+
             }
         }
     }
