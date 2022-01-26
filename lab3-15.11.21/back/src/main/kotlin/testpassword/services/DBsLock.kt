@@ -4,20 +4,24 @@ import redis.clients.jedis.Jedis
 import redis.clients.jedis.JedisShardInfo
 import testpassword.plugins.printErr
 import java.sql.SQLException
+import kotlin.runCatching
 
 class DatabaseBusyException: SQLException()
 
 object DBsLock {
 
     private var client: Jedis? = null
-    operator fun invoke(): Unit =
-        try {
-            client = Jedis(parseCredsFromEnv()).also { it.ping() }
-        } catch (e: Exception) {
-            printErr(when (e) {
+
+    operator fun invoke() =
+        runCatching {
+            Jedis(parseCredsFromEnv()).also { it.ping() }
+        }.onSuccess {
+            client = it
+        }.onFailure {
+            printErr(when (it) {
                 is IndexOutOfBoundsException -> "REDIS_CACHE_CREDS should match pattern 'url:port;password'"
                 is NumberFormatException -> "port should be in range [0; 65535]"
-                else -> "Unexpected exception: ${e.stackTraceToString()}"
+                else -> "Unexpected exception: ${it.stackTraceToString()}"
             })
         }
 
@@ -30,16 +34,18 @@ object DBsLock {
         return JedisShardInfo(host, port.toInt(), true).apply { password = pass }
     }
 
-    operator fun contains(dbUrl: String): Boolean = isInit { client!!.get(dbUrl) != null }
+    operator fun contains(dbUrl: String): Boolean = isInit { client!!.get(dbUrl).toBoolean() }
 
     operator fun plus(dbUrl: String): Unit = isInit { client!!.set(dbUrl, true.toString()) }
 
     operator fun minus(dbUrl: String): Unit = isInit { client!!.set(dbUrl, false.toString()) }
 
-    fun executeLocking(dbUrl: String, lockingOps: () -> Unit): Unit =
-        if (dbUrl !in this) {
+    // TODO: если lockingOps кинуло exception, то освободить дб из redis
+    fun <T> executeLocking(dbUrl: String, lockingOps: () -> T): T =
+       if (dbUrl !in this) {
             this + dbUrl
-            lockingOps()
+            val res = lockingOps()
             this - dbUrl
+            res
         } else throw DatabaseBusyException()
 }

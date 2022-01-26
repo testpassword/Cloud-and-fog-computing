@@ -8,8 +8,8 @@ enum class OUTPUT_MODE { EMAIL, HTTP, SMB }
 
 @Serializable data class TestParams(
     val connectionUrl: String,
-    val queries: List<String>,
-    val outputMode: OUTPUT_MODE,
+    val queries: Set<String> = emptySet(),
+    val outputMode: OUTPUT_MODE = OUTPUT_MODE.HTTP,
     val outputParams: String = "",
     val saveBetter: Boolean = false,
 ) {

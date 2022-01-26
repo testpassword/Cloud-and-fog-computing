@@ -4,4 +4,7 @@ fun printErr(vararg obj: Any): Unit = obj.forEach { System.err.println(it.toStri
 
 infix operator fun String.minus(removable: String): String = this.replace(removable, "")
 
-fun String.toIntOr(option: Int): Int = toIntOrNull(radix = 10) ?: option
+fun <T> Collection<T>.powerset(): Set<Set<T>> = powerset(this, setOf(emptySet()))
+
+private tailrec fun <T> powerset(left: Collection<T>, acc: Set<Set<T>>): Set<Set<T>> =
+    if (left.isEmpty()) acc else powerset(left.drop(1), acc + acc.map { it + left.first() })

@@ -1,0 +1,6 @@
+indexStatement,timeTaken,diff,$it,$origTime
+CREATE INDEX End_date_and_timeMissionHASH ON mission USING HASH(end_date_and_time);,64,-2,IndexQueryStatement(table=mission, columns=[end_date_and_time])=64,62
+CREATE INDEX End_date_and_timeMissionBTREE ON mission USING BTREE(end_date_and_time);,63,-1,IndexQueryStatement(table=mission, columns=[end_date_and_time])=63,62
+CREATE INDEX Start_date_and_timeMissionHASH ON mission USING HASH(start_date_and_time);,59,3,IndexQueryStatement(table=mission, columns=[start_date_and_time])=59,62
+CREATE INDEX Start_date_and_timeMissionBTREE ON mission USING BTREE(start_date_and_time);,62,0,IndexQueryStatement(table=mission, columns=[start_date_and_time])=62,62
+CREATE INDEX End_date_and_timeStart_date_and_timeMissionBTREE ON mission USING BTREE(end_date_and_time, start_date_and_time);,86,-24,IndexQueryStatement(table=mission, columns=[end_date_and_time, start_date_and_time])=86,62

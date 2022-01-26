@@ -1,24 +1,40 @@
 package testpassword.services
 
-import testpassword.models.TestResult
+import net.sf.jsqlparser.parser.CCJSqlParserUtil
+import net.sf.jsqlparser.statement.select.*
+import net.sf.jsqlparser.util.TablesNamesFinder
+import testpassword.models.IndexQueryStatement
+import testpassword.plugins.powerset
 
-// tableName-columnNane node
-typealias IndexedUnit = Pair<String, String>
+class DBsTester(private val queries: Set<String>, private val support: DBsSupport) {
 
-object DBsTester {
+    operator fun invoke(): Map<IndexQueryStatement, Long> = benchmarkQuery()
 
-    fun findUnits(): Set<IndexedUnit> {
-        /* todo:
-            отловить все таблицы,
-            проверить есть ли алисы
-            найти все тестируемые поля
-        */
-        return emptySet()
+    fun benchmarkQuery(): Map<IndexQueryStatement, Long> =
+        formIndexesQueries()
+            .associateWith {
+                support.execute { it.createIndexStatement }
+                val execTime = support.measureQuery { queries.first() }
+                support.execute { it.dropIndexStatement }
+                execTime
+            }
+
+    private fun formIndexesQueries(): List<IndexQueryStatement> {
+        val selectStatement = CCJSqlParserUtil.parse(queries.first()) as Select
+        val usedTable = TablesNamesFinder().getTableList(selectStatement).first()
+        val tableColumns = support.getTableColumns(usedTable)
+        val columnsFromSelect = (selectStatement.selectBody as PlainSelect).selectItems.map { it.toString() }
+        // todo: вытащить имена из where, group by, order, having
+        val columnsFromWhere = selectStatement.toString().split("WHERE")[1].split(" ")
+        val columns = (columnsFromSelect + columnsFromWhere).filter { it in tableColumns }.toSet()
+        return columns
+            .powerset()
+            .filter { it.isNotEmpty() }
+            .map { IndexQueryStatement(usedTable, it) } // create index query statement for standart sql
+                //TODO: здесь динамически вытягивать тип бд
+            .flatMap { SUPPORTED_DBs.postgresql.buildDBSpecificIndexQueries(it) } // create db-specifix index query statement for tested db
     }
 
-    fun testUnit(query: String): TestResult {
-        return TestResult("d", 1.0, 3.0, 4.0)
-    }
-
-    fun createIndexes(unit: IndexedUnit) {}
+    infix fun findBest(benchmarkingRes: Map<IndexQueryStatement, Long>): Pair<IndexQueryStatement, Long>? =
+        benchmarkingRes.minByOrNull { it.value }?.toPair()
 }

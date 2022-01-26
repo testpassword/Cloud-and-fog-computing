@@ -1,9 +1,6 @@
 package testpassword.consumers
 
 import com.microsoft.azure.storage.CloudStorageAccount
-import java.nio.file.Path
-import kotlin.io.path.absolutePathString
-import kotlin.io.path.name
 
 object SMB {
 
@@ -13,13 +10,13 @@ object SMB {
         return "DefaultEndpointsProtocol=https;AccountName=${name};AccountKey=${key}"
     }
 
-    operator fun invoke(creds: String, productPath: Path) =
+    operator fun invoke(creds: String, product: ByteArray, productName: String) =
         CloudStorageAccount
             .parse(parseCreds(creds))
             .createCloudFileClient()
             .getShareReference("optreports")
             .also { it.createIfNotExists() }
             .rootDirectoryReference
-            .getFileReference(productPath.name)
-            .uploadFromFile(productPath.absolutePathString())
+            .getFileReference(productName)
+            .uploadFromByteArray(product, 0, product.size)
 }

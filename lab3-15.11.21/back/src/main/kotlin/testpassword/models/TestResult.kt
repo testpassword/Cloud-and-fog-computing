@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable data class TestResult(
     val bestIndex: String,
-    val timeBefore: Double,
-    val timeAfter: Double,
-    val diff: Double
+    val timeBefore: Long,
+    val timeAfter: Long,
+    val diff: Long
 )

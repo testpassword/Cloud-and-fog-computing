@@ -9,8 +9,6 @@ import io.ktor.serialization.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import kotlinx.serialization.json.Json
-import testpassword.models.TestResult
-import testpassword.plugins.*
 import testpassword.routes.actions
 import testpassword.services.*
 import java.rmi.ConnectException
@@ -39,27 +37,40 @@ fun Application.configureRouting() =
 
 fun Application.configureExceptionHandlers() =
     install(StatusPages) {
-        exception<DatabaseNotSupportedException> {
-            call.respond(HttpStatusCode.BadRequest, """
-                This database not supported yet.
-                Supported: ${DBsSupport.SUPPORTED_DBs.joinToString(", ")}
-            """.trimIndent())
-        }
-        exception<SQLClientInfoException> {
-            call.respond(HttpStatusCode.NotFound, """
-                Provided connectionUrl doesn't not match pattern: '${DBsSupport.CONNECTION_URL_PATTERN}'
-            """.trimIndent())
-        }
-        exception<ConnectException> {
-            call.respond(HttpStatusCode.GatewayTimeout, """
-                Can't ping database. Please check it's availability and try again.
-            """.trimIndent())
+        exception<Exception> {
+            val (status, msg) = when (it) {
+                is DatabaseNotSupportedException -> HttpStatusCode.BadRequest to """
+                    This database not supported yet.
+                    Supported: ${SUPPORTED_DBs.values().joinToString(", ")}
+                    """.trimIndent()
+                is SQLClientInfoException -> HttpStatusCode.NotFound to """
+                    Provided connectionUrl doesn't not match pattern: '${DBsSupport.CONNECTION_URL_PATTERN}'
+                    """.trimIndent()
+                is ConnectException -> HttpStatusCode.GatewayTimeout to """
+                    Can't ping database. Please check it's availability and creds and try again.
+                    """.trimIndent()
+                is IndexCreationError -> HttpStatusCode.InternalServerError to """
+                    Error while creating database server specifix index for query:
+                    ${it.localizedMessage}
+                """.trimIndent()
+                else -> {
+                    it.printStackTrace()
+                    HttpStatusCode.InternalServerError to """
+                        Something goes wrong, connect to support with:
+                        ${it.stackTraceToString()}
+                    """.trimIndent()
+                }
+            }
+            call.respond(status, msg)
         }
     }
 
 fun main() {
-    ReportsWriter(listOf(TestResult("d", 1.0, 3.0, 3.2)))
-    embeddedServer(Netty, System.getenv("SERVICE_PORT").toIntOr(80), System.getenv("SERVICE_HOST") ?: "0.0.0.0") {
+    embeddedServer(
+        Netty,
+        System.getenv("SERVICE_PORT").toIntOrNull() ?: 80,
+        System.getenv("SERVICE_HOST") ?: "0.0.0.0"
+    ) {
         DBsLock()
         configureModules()
         configureSecurity()

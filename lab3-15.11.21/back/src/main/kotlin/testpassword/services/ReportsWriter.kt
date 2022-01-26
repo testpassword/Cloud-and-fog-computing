@@ -12,30 +12,34 @@ object ReportsWriter {
     private val reportsDir: String
         get() = System.getenv("REPORTS_TEMP_STORAGE") ?: "./"
 
-    operator fun invoke(objects: Iterable<Any>) {
-        File(reportsDir).mkdirs()
-        FileOutputStream(
-            File("${reportsDir}/sqlopt_report_${
-                DateTimeFormatter
-                    .ofPattern("yyyy-MM-dd_HH-mm-ss")
-                    .withZone(ZoneOffset.UTC)
-                    .format(Instant.now())}.csv")
-                .apply { createNewFile() }, true
-        ).bufferedWriter()
-            .use {
-                val fields = objects.first()::class.java.declaredFields.map(Field::getName).filterNot { f -> f == "Companion" }
-                it.write(fields.joinToString(","))
-                it.write("\n")
-                objects.forEach { o ->
-                    it.write(
-                        buildString {
-                            fields.forEach { f ->
-                                append("${o::class.java.getDeclaredField(f).apply { isAccessible = true }[o]},")
-                            }
-                        }.dropLast(1))
-                    it.write("\n")
-                }
+    private val buildName: String
+        get() = "${reportsDir}/sqlopt_report_${
+            DateTimeFormatter
+                .ofPattern("yyyy-MM-dd_HH-mm-ss")
+                .withZone(ZoneOffset.UTC)
+                .format(Instant.now())}.csv"
+
+    // TODO: чот тут бред происходит
+    fun serialize(objects: Iterable<Any>): String =
+        buildString {
+            val fields = objects.first()::class.java.declaredFields.map(Field::getName).filterNot { f -> f == "Companion" }
+            append("$fields\n")
+            objects.forEach { o ->
+                append(
+                    buildString {
+                        fields.forEach { f ->
+                            append("${o::class.java.getDeclaredField(f).apply { isAccessible = true }[o]},")
+                        }
+                    }.dropLast(1))
+                append("\n")
             }
+        }
+
+    fun writeToFile(objects: Iterable<Any>) {
+        File(reportsDir).mkdirs()
+        FileOutputStream(File(buildName).apply { createNewFile() }, true)
+            .bufferedWriter()
+            .use { it.write(serialize(objects)) }
     }
 
     val Number.ruLocale: String
